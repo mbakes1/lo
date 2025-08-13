@@ -1,13 +1,10 @@
 "use client"
-
-import type React from "react"
-import { useRef } from "react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Upload, X, FileText, Plus, Minus, Truck } from "lucide-react"
+import { Plus, Minus, Truck } from "lucide-react"
 import type { FormData } from "../hauler-onboarding-form"
 
 interface VehicleInfoStepProps {
@@ -44,109 +41,6 @@ const loadCapacities = [
   "14 Tons",
   "15 Tons",
 ]
-
-interface MultiFileUploadProps {
-  label: string
-  files: File[]
-  onFilesChange: (files: File[]) => void
-  error?: string
-  accept?: string
-  description?: string
-}
-
-function MultiFileUpload({
-  label,
-  files,
-  onFilesChange,
-  error,
-  accept = ".pdf,.jpg,.jpeg,.png",
-  description,
-}: MultiFileUploadProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(event.target.files || [])
-    onFilesChange([...files, ...selectedFiles])
-  }
-
-  const handleRemoveFile = (index: number) => {
-    const newFiles = files.filter((_, i) => i !== index)
-    onFilesChange(newFiles)
-  }
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes"
-    const k = 1024
-    const sizes = ["Bytes", "KB", "MB", "GB"]
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label className="text-sm font-medium">
-          {label} <span className="text-primary">*</span>
-        </Label>
-        {description && <p className="text-xs text-muted-foreground">{description}</p>}
-      </div>
-
-      {/* File Upload Area */}
-      <Card
-        className={`border-2 border-dashed transition-colors ${error ? "border-destructive" : "border-muted-foreground/25 hover:border-muted-foreground/50"}`}
-      >
-        <CardContent className="p-4 sm:p-6">
-          <div className="text-center">
-            <Upload className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mb-3 sm:mb-4" />
-            <div className="space-y-2">
-              <Button
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-transparent h-10 sm:h-9"
-              >
-                Add Files
-              </Button>
-              <p className="text-xs text-muted-foreground">Drag and drop or click to upload multiple files</p>
-              <p className="text-xs text-muted-foreground">Supported formats: PDF, JPG, PNG (Max 10MB each)</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <input ref={fileInputRef} type="file" accept={accept} multiple onChange={handleFileSelect} className="hidden" />
-
-      {/* Uploaded Files List */}
-      {files.length > 0 && (
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Uploaded Files ({files.length})</Label>
-          <div className="space-y-2">
-            {files.map((file, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/20">
-                <div className="flex items-center space-x-3 min-w-0 flex-1">
-                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRemoveFile(index)}
-                  className="text-muted-foreground hover:text-foreground flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
-    </div>
-  )
-}
 
 export function VehicleInfoStep({ formData, updateFormData, errors }: VehicleInfoStepProps) {
   const addTruck = () => {
@@ -337,48 +231,10 @@ export function VehicleInfoStep({ formData, updateFormData, errors }: VehicleInf
         </div>
       </div>
 
-      <div className="space-y-4 sm:space-y-6">
-        <div className="space-y-2">
-          <h3 className="text-lg font-semibold text-foreground">Vehicle Documents</h3>
-          <p className="text-sm text-muted-foreground">
-            Upload all required documents for your vehicles. We will manually review and match documents to the
-            appropriate trucks.
-          </p>
-        </div>
-
-        <MultiFileUpload
-          label="Vehicle Documents"
-          files={formData.vehicleDocuments}
-          onFilesChange={(files) => updateFormData({ vehicleDocuments: files })}
-          error={errors.vehicleDocuments}
-          description="Upload all vehicle documents including proof of ownership, roadworthy certificates, insurance certificates, and vehicle photos for all trucks"
-        />
-
-        <div className="bg-muted/50 border border-muted rounded-lg p-4">
-          <h4 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Required Documents per Truck:</h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• Proof of ownership (registration certificate)</li>
-            <li>• Roadworthy certificate (not older than 60 days)</li>
-            <li>• Insurance certificate (comprehensive and current)</li>
-            <li>• Vehicle photo (optional but recommended)</li>
-          </ul>
-        </div>
-      </div>
+      
 
       {/* Important Notice */}
-      <div className="bg-muted/50 border border-muted rounded-lg p-4 sm:p-6">
-        <div className="space-y-2">
-          <h4 className="font-semibold text-foreground text-sm sm:text-base">Important Requirements</h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• Vehicle capacity must be between 1 and 15 tons</li>
-            <li>• All documents must be current and valid</li>
-            <li>• Roadworthy certificate must not be older than 60 days</li>
-            <li>• Insurance must be comprehensive and current</li>
-            <li>• Vehicles must be registered in your name or business name</li>
-            <li>• We will manually review and match documents to trucks during processing</li>
-          </ul>
-        </div>
-      </div>
+      
     </div>
   )
 }

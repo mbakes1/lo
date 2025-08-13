@@ -192,40 +192,10 @@ export function TermsConsentStep({ formData, updateFormData, errors }: TermsCons
       </div>
 
       {/* Important Legal Notice */}
-      <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-6">
-        <div className="space-y-3">
-          <h4 className="font-semibold text-amber-900 dark:text-amber-100">Important Legal Information</h4>
-          <div className="text-sm text-amber-800 dark:text-amber-200 space-y-2">
-            <p>
-              <strong>Your Rights:</strong> You have the right to access, update, or delete your personal information at
-              any time. You can withdraw consent for non-essential communications.
-            </p>
-            <p>
-              <strong>Data Retention:</strong> Your information will be retained for as long as your account is active,
-              plus any legally required retention periods.
-            </p>
-            <p>
-              <strong>Contact Us:</strong> For questions about these terms or your data, contact our privacy team at
-              privacy@haulerplatform.com
-            </p>
-          </div>
-        </div>
-      </div>
+      
 
       {/* Consent Summary */}
-      <div className="bg-muted/50 border border-muted rounded-lg p-6">
-        <div className="space-y-2">
-          <h4 className="font-semibold text-foreground">Consent Summary</h4>
-          <p className="text-sm text-muted-foreground">
-            By proceeding, you confirm that you have read, understood, and agree to:
-          </p>
-          <ul className="text-sm text-muted-foreground space-y-1 mt-3">
-            <li>✓ Terms of Use and Hauler Agreement</li>
-            <li>✓ Privacy Policy and Data Processing</li>
-            <li>✓ Communication and Contact Preferences</li>
-          </ul>
-        </div>
-      </div>
+      
     </div>
   )
 }

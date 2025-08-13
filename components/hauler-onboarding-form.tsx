@@ -1,9 +1,6 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
-import { useForm } from "@formspree/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -14,6 +11,7 @@ import { VehicleInfoStep } from "./onboarding-steps/vehicle-info-step"
 import { BankingInfoStep } from "./onboarding-steps/banking-info-step"
 import { TermsConsentStep } from "./onboarding-steps/terms-consent-step"
 import { ConfirmationStep } from "./onboarding-steps/confirmation-step"
+import emailjs from "emailjs-com"
 
 export interface FormData {
   // Basic Info
@@ -37,7 +35,6 @@ export interface FormData {
     trailer1Registration: string
     trailer2Registration: string
   }>
-  vehicleDocuments: File[]
 
   // Banking Info
   bankName: string
@@ -45,7 +42,6 @@ export interface FormData {
   accountNumber: string
   accountType: string
   branchCode: string
-  proofOfBankAccount: File | null
 
   // Terms & Consent
   acceptTerms: boolean
@@ -55,15 +51,13 @@ export interface FormData {
 
 const steps = [
   { id: 1, title: "Basic Information", description: "Personal and contact details" },
-  { id: 2, title: "Vehicle Information", description: "Truck details and documentation" },
+  { id: 2, title: "Vehicle Information", description: "Truck details and registration" },
   { id: 3, title: "Banking Details", description: "Payment and account information" },
   { id: 4, title: "Terms & Consent", description: "Agreement and permissions" },
   { id: 5, title: "Confirmation", description: "Review and submit" },
 ]
 
 export function HaulerOnboardingForm() {
-  const [state, handleFormspreeSubmit] = useForm("mblkwvar")
-
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState<FormData>({
     fullName: "",
@@ -86,13 +80,11 @@ export function HaulerOnboardingForm() {
         trailer2Registration: "",
       },
     ],
-    vehicleDocuments: [],
     bankName: "",
     accountHolderName: "",
     accountNumber: "",
     accountType: "",
     branchCode: "",
-    proofOfBankAccount: null,
     acceptTerms: false,
     consentToStore: false,
     consentToContact: false,
@@ -179,16 +171,6 @@ export function HaulerOnboardingForm() {
             }
           })
         }
-
-        if (formData.vehicleDocuments.length === 0) {
-          newErrors.vehicleDocuments = "At least one vehicle document is required"
-        } else {
-          formData.vehicleDocuments.forEach((file, index) => {
-            if (file.size > 10 * 1024 * 1024) {
-              newErrors[`vehicleDocument-${index}`] = `Document ${index + 1} size must be less than 10MB`
-            }
-          })
-        }
         break
 
       case 3:
@@ -213,12 +195,6 @@ export function HaulerOnboardingForm() {
           newErrors.branchCode = "Branch code is required"
         } else if (!/^\d{6}$/.test(formData.branchCode)) {
           newErrors.branchCode = "Branch code must be exactly 6 digits"
-        }
-
-        if (!formData.proofOfBankAccount) {
-          newErrors.proofOfBankAccount = "Proof of bank account is required"
-        } else if (formData.proofOfBankAccount.size > 10 * 1024 * 1024) {
-          newErrors.proofOfBankAccount = "File size must be less than 10MB"
         }
         break
 
@@ -245,9 +221,7 @@ export function HaulerOnboardingForm() {
     setSubmitError("")
   }
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
-
+  const handleSubmit = async () => {
     if (!validateCurrentStep()) {
       return
     }
@@ -256,107 +230,47 @@ export function HaulerOnboardingForm() {
     setSubmitError("")
 
     try {
-      // Create FormData for Formspree submission
-      const formDataToSubmit = new FormData()
+      const serviceId = "service_tch5rgi"
+      const templateId = "template_ip0owji"
+      const publicKey = "ByieGc7Pzw6Jt7f7I"
 
-      // Format application data nicely
-      const applicationSummary = `
-HAULER ONBOARDING APPLICATION
-=============================
-
-APPLICANT INFORMATION:
-- Full Name: ${formData.fullName}
-- ID/Passport: ${formData.idNumber}
-- Entity Type: ${formData.entityType}
-${
-  formData.entityType === "business"
-    ? `- Business Name: ${formData.businessName}
-- BEEE Level: ${formData.beeLevel}
-- CIPC Registration: ${formData.cipcRegistration}`
-    : ""
-}
-- Mobile: ${formData.mobileNumber}
-- Email: ${formData.email}
-- Address: ${formData.physicalAddress}
-- Province: ${formData.province}
-
-VEHICLE INFORMATION:
-${formData.trucks
-  .map(
-    (truck, index) => `
-Truck ${index + 1}:
-- Vehicle Type: ${truck.vehicleType}
-- Load Capacity: ${truck.loadCapacity}
-- Horse Registration: ${truck.horseRegistration}
-${truck.trailer1Registration ? `- Trailer 1 Registration: ${truck.trailer1Registration}` : ""}
-${truck.trailer2Registration ? `- Trailer 2 Registration: ${truck.trailer2Registration}` : ""}
-`,
-  )
-  .join("")}
-
-BANKING INFORMATION:
-- Bank Name: ${formData.bankName}
-- Account Holder: ${formData.accountHolderName}
-- Account Number: ${formData.accountNumber}
-- Account Type: ${formData.accountType}
-- Branch Code: ${formData.branchCode}
-
-CONSENT & TERMS:
-- Terms Accepted: ${formData.acceptTerms ? "Yes" : "No"}
-- Data Storage Consent: ${formData.consentToStore ? "Yes" : "No"}
-- Contact Consent: ${formData.consentToContact ? "Yes" : "No"}
-
-DOCUMENTS ATTACHED:
-- Vehicle Documents: ${formData.vehicleDocuments.length} files
-- Banking Document: ${formData.proofOfBankAccount ? "1 file" : "None"}
-
-Application submitted on: ${new Date().toLocaleString()}
-      `
-
-      // Add formatted message
-      formDataToSubmit.append("message", applicationSummary)
-      formDataToSubmit.append("subject", `New Hauler Application - ${formData.fullName}`)
-
-      // Add individual fields with proper names for Formspree
-      formDataToSubmit.append("applicant_name", formData.fullName)
-      formDataToSubmit.append("applicant_email", formData.email)
-      formDataToSubmit.append("applicant_phone", formData.mobileNumber)
-      formDataToSubmit.append("entity_type", formData.entityType)
-
-      if (formData.entityType === "business") {
-        formDataToSubmit.append("business_name", formData.businessName)
-        formDataToSubmit.append("beee_level", formData.beeLevel)
-        formDataToSubmit.append("cipc_registration", formData.cipcRegistration)
+      const templateParams = {
+        applicant_name: formData.fullName,
+        id_number: formData.idNumber,
+        entity_type: formData.entityType === "business" ? "Business" : "Individual",
+        business_name: formData.entityType === "business" ? formData.businessName : "",
+        beee_level: formData.entityType === "business" ? formData.beeLevel : "",
+        cipc_number: formData.entityType === "business" ? formData.cipcRegistration : "",
+        mobile_number: formData.mobileNumber,
+        email_address: formData.email,
+        physical_address: formData.physicalAddress,
+        province: formData.province,
+        truck_count: formData.trucks.length.toString(),
+        truck_details: formData.trucks.map((truck, index) => ({
+          truck_number: (index + 1).toString(),
+          vehicle_type: truck.vehicleType,
+          load_capacity: truck.loadCapacity,
+          horse_registration: truck.horseRegistration,
+          trailer1_registration: truck.trailer1Registration || "",
+          trailer2_registration: truck.trailer2Registration || "",
+        })),
+        bank_name: formData.bankName,
+        account_holder: formData.accountHolderName,
+        account_number: formData.accountNumber,
+        account_type: formData.accountType,
+        branch_code: formData.branchCode,
+        terms_accepted: formData.acceptTerms ? "Yes" : "No",
+        data_consent: formData.consentToStore ? "Yes" : "No",
+        contact_consent: formData.consentToContact ? "Yes" : "No",
+        submission_date: new Date().toLocaleString(),
       }
 
-      // Add truck information as JSON
-      formDataToSubmit.append("trucks_data", JSON.stringify(formData.trucks))
+      await emailjs.send(serviceId, templateId, templateParams, publicKey)
 
-      // Add banking info
-      formDataToSubmit.append("bank_name", formData.bankName)
-      formDataToSubmit.append("account_number", formData.accountNumber)
-
-      // Add all vehicle documents
-      formData.vehicleDocuments.forEach((file, index) => {
-        formDataToSubmit.append(`vehicle_document_${index + 1}`, file, file.name)
-      })
-
-      // Add banking document
-      if (formData.proofOfBankAccount) {
-        formDataToSubmit.append("banking_document", formData.proofOfBankAccount, formData.proofOfBankAccount.name)
-      }
-
-      // Submit to Formspree
-      await handleFormspreeSubmit(formDataToSubmit)
-
-      if (state.errors && state.errors.length > 0) {
-        throw new Error("Form submission failed. Please check your information and try again.")
-      }
-
-      // Success - move to confirmation
       setCurrentStep(5)
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "An unexpected error occurred. Please try again.")
+      console.error("Email submission error:", error)
+      setSubmitError("Failed to submit application. Please try again or contact support.")
     } finally {
       setIsSubmitting(false)
     }
@@ -452,21 +366,10 @@ Application submitted on: ${new Date().toLocaleString()}
           <CardDescription className="text-sm sm:text-base">{steps[currentStep - 1]?.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 sm:space-y-8 px-4 sm:px-6">
-          {(submitError || (state.errors && state.errors.length > 0)) && (
+          {submitError && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                {submitError || "Form submission failed. Please check your information and try again."}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {state.succeeded && currentStep !== 5 && (
-            <Alert className="border-green-200 bg-green-50">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                Application submitted successfully! We'll review your information and contact you soon.
-              </AlertDescription>
+              <AlertDescription>{submitError}</AlertDescription>
             </Alert>
           )}
 
@@ -487,10 +390,10 @@ Application submitted on: ${new Date().toLocaleString()}
 
               <Button
                 onClick={currentStep === 4 ? handleSubmit : handleNext}
-                disabled={isSubmitting || state.submitting}
+                disabled={isSubmitting}
                 className="flex items-center justify-center gap-2 h-11 sm:h-10 order-1 sm:order-2"
               >
-                {isSubmitting || state.submitting ? (
+                {isSubmitting ? (
                   <>
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
                     Submitting...

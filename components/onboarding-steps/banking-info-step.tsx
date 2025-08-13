@@ -244,41 +244,10 @@ export function BankingInfoStep({ formData, updateFormData, errors }: BankingInf
       </div>
 
       {/* Document Upload Section */}
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <h3 className="text-lg font-semibold text-foreground">Bank Account Verification</h3>
-          <p className="text-sm text-muted-foreground">
-            Upload proof of your bank account to verify ownership and account details.
-          </p>
-        </div>
-
-        <div className="max-w-lg">
-          <FileUpload
-            label="Proof of Bank Account"
-            required
-            file={formData.proofOfBankAccount}
-            onFileChange={(file) => updateFormData({ proofOfBankAccount: file })}
-            error={errors.proofOfBankAccount}
-            description="Bank statement, cancelled cheque, or bank letter (not older than 3 months)"
-          />
-        </div>
-      </div>
+      
 
       {/* Security Notice */}
-      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
-        <div className="flex items-start space-x-3">
-          <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-          <div className="space-y-2">
-            <h4 className="font-semibold text-blue-900 dark:text-blue-100">Security & Privacy</h4>
-            <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-              <p>• Your banking information is encrypted and stored securely</p>
-              <p>• We never store your full account details in plain text</p>
-              <p>• Bank details are only used for payment processing</p>
-              <p>• You can update your banking information at any time</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      
 
       {/* Important Requirements */}
       <div className="bg-muted/50 border border-muted rounded-lg p-6">
@@ -287,7 +256,7 @@ export function BankingInfoStep({ formData, updateFormData, errors }: BankingInf
           <ul className="text-sm text-muted-foreground space-y-1">
             <li>• Account must be in your name or registered business name</li>
             <li>• Account must be active and in good standing</li>
-            <li>• Proof of bank account must not be older than 3 months</li>
+            
             <li>• All banking details must match your provided documentation</li>
             <li>• International accounts are not currently supported</li>
           </ul>
