@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { CheckCircle, Circle, ArrowLeft, ArrowRight, AlertTriangle } from "lucide-react"
+import { CheckCircle, Circle, ArrowLeft, ArrowRight, AlertTriangle, Save, RotateCcw } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { BasicInfoStep } from "./onboarding-steps/basic-info-step"
 import { VehicleInfoStep } from "./onboarding-steps/vehicle-info-step"
@@ -101,10 +101,78 @@ export function HaulerOnboardingForm() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string>("")
+  const [isAutoSaving, setIsAutoSaving] = useState(false)
+  const [hasRestoredData, setHasRestoredData] = useState(false)
+  const [showRestorePrompt, setShowRestorePrompt] = useState(false)
+
+  useEffect(() => {
+    if (hasRestoredData) {
+      setIsAutoSaving(true)
+      const timeoutId = setTimeout(() => {
+        try {
+          const dataToSave = {
+            formData,
+            currentStep,
+            timestamp: new Date().toISOString(),
+          }
+          localStorage.setItem("hauler-onboarding-draft", JSON.stringify(dataToSave))
+        } catch (error) {
+          console.error("Failed to save draft:", error)
+        }
+        setIsAutoSaving(false)
+      }, 1000) // Debounce saves by 1 second
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [formData, currentStep, hasRestoredData])
+
+  useEffect(() => {
+    try {
+      const savedData = localStorage.getItem("hauler-onboarding-draft")
+      if (savedData) {
+        const parsed = JSON.parse(savedData)
+        const savedTimestamp = new Date(parsed.timestamp)
+        const now = new Date()
+        const hoursSinceLastSave = (now.getTime() - savedTimestamp.getTime()) / (1000 * 60 * 60)
+
+        if (hoursSinceLastSave < 24) {
+          setShowRestorePrompt(true)
+        } else {
+          localStorage.removeItem("hauler-onboarding-draft")
+          setHasRestoredData(true)
+        }
+      } else {
+        setHasRestoredData(true)
+      }
+    } catch (error) {
+      console.error("Failed to restore draft:", error)
+      setHasRestoredData(true)
+    }
+  }, [])
+
+  const handleRestoreData = () => {
+    try {
+      const savedData = localStorage.getItem("hauler-onboarding-draft")
+      if (savedData) {
+        const parsed = JSON.parse(savedData)
+        setFormData(parsed.formData)
+        setCurrentStep(parsed.currentStep)
+      }
+    } catch (error) {
+      console.error("Failed to restore data:", error)
+    }
+    setShowRestorePrompt(false)
+    setHasRestoredData(true)
+  }
+
+  const handleDismissRestore = () => {
+    localStorage.removeItem("hauler-onboarding-draft")
+    setShowRestorePrompt(false)
+    setHasRestoredData(true)
+  }
 
   const updateFormData = (updates: Partial<FormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }))
-    // Clear related errors when user updates fields
     const updatedFields = Object.keys(updates)
     setErrors((prev) => {
       const newErrors = { ...prev }
@@ -120,7 +188,6 @@ export function HaulerOnboardingForm() {
 
     switch (currentStep) {
       case 1:
-        // Basic validation
         if (!formData.fullName.trim()) newErrors.fullName = "Full name is required"
         if (!formData.idNumber.trim()) newErrors.idNumber = "ID/Passport number is required"
         if (!formData.entityType) newErrors.entityType = "Entity type must be selected"
@@ -136,7 +203,6 @@ export function HaulerOnboardingForm() {
           }
         }
 
-        // Enhanced mobile number validation
         if (!formData.mobileNumber.trim()) {
           newErrors.mobileNumber = "Mobile number is required"
         } else {
@@ -146,7 +212,6 @@ export function HaulerOnboardingForm() {
           }
         }
 
-        // Enhanced email validation
         if (!formData.email.trim()) {
           newErrors.email = "Email is required"
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -190,7 +255,6 @@ export function HaulerOnboardingForm() {
           newErrors.accountHolderName = "Account holder name must be at least 2 characters"
         }
 
-        // Enhanced account number validation
         if (!formData.accountNumber.trim()) {
           newErrors.accountNumber = "Account number is required"
         } else if (!/^\d{8,13}$/.test(formData.accountNumber)) {
@@ -199,7 +263,6 @@ export function HaulerOnboardingForm() {
 
         if (!formData.accountType) newErrors.accountType = "Account type is required"
 
-        // Enhanced branch code validation
         if (!formData.branchCode.trim()) {
           newErrors.branchCode = "Branch code is required"
         } else if (!/^\d{6}$/.test(formData.branchCode)) {
@@ -343,6 +406,8 @@ export function HaulerOnboardingForm() {
 
       updateFormData({ applicationNumber } as any)
       setCurrentStep(6)
+
+      localStorage.removeItem("hauler-onboarding-draft")
     } catch (error) {
       console.error("Submission error:", error)
       setSubmitError("Failed to submit application. Please try again or contact support.")
@@ -374,18 +439,50 @@ export function HaulerOnboardingForm() {
 
   return (
     <div className="space-y-8 sm:space-y-12">
-      {/* Progress Section */}
+      {showRestorePrompt && (
+        <Alert className="border-blue-200 bg-blue-50">
+          <RotateCcw className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>We found a saved draft of your application. Would you like to continue where you left off?</span>
+            <div className="flex gap-2 ml-4">
+              <Button size="sm" variant="outline" onClick={handleDismissRestore}>
+                Start Fresh
+              </Button>
+              <Button size="sm" onClick={handleRestoreData}>
+                Restore Draft
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="space-y-6 sm:space-y-8">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
           <div className="text-sm font-medium text-muted-foreground">
             Step {currentStep} of {steps.length - 1}
           </div>
-          <div className="text-sm font-medium text-primary">{Math.round(progress)}% Complete</div>
+          <div className="flex items-center gap-3">
+            {hasRestoredData && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                {isAutoSaving ? (
+                  <>
+                    <Save className="h-3 w-3 animate-pulse" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-3 w-3" />
+                    Draft saved
+                  </>
+                )}
+              </div>
+            )}
+            <div className="text-sm font-medium text-primary">{Math.round(progress)}% Complete</div>
+          </div>
         </div>
 
         <Progress value={progress} className="h-2" />
 
-        {/* Step Indicators */}
         <div className="hidden sm:flex sm:justify-between">
           {steps.slice(0, -1).map((step, index) => (
             <div key={step.id} className="flex flex-col items-center space-y-3 flex-1">
@@ -436,7 +533,6 @@ export function HaulerOnboardingForm() {
         </div>
       </div>
 
-      {/* Form Content */}
       <Card className="border-0 shadow-sm sm:shadow-lg">
         <CardHeader className="pb-6 sm:pb-8 px-4 sm:px-6">
           <CardTitle className="text-xl sm:text-2xl font-semibold">{steps[currentStep - 1]?.title}</CardTitle>
@@ -452,7 +548,6 @@ export function HaulerOnboardingForm() {
 
           {renderStep()}
 
-          {/* Navigation Buttons */}
           {currentStep < 6 && (
             <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 pt-6 sm:pt-8 border-t">
               <Button
