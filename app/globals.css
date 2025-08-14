@@ -91,4 +91,29 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Override all focus styles to use red only */
+  input:focus,
+  textarea:focus,
+  select:focus,
+  button:focus,
+  [role="button"]:focus,
+  [role="combobox"]:focus,
+  [role="listbox"]:focus,
+  [role="option"]:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 2px hsl(var(--ring)) !important;
+    border-color: hsl(var(--ring)) !important;
+  }
+
+  /* Remove any default browser focus styles */
+  *:focus {
+    outline: none !important;
+  }
+
+  /* Ensure focus-visible uses red ring */
+  *:focus-visible {
+    outline: none !important;
+    box-shadow: 0 0 0 2px hsl(var(--ring)) !important;
+  }
 }
