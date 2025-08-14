@@ -11,6 +11,7 @@ import { VehicleInfoStep } from "./onboarding-steps/vehicle-info-step"
 import { BankingInfoStep } from "./onboarding-steps/banking-info-step"
 import { TermsConsentStep } from "./onboarding-steps/terms-consent-step"
 import { ConfirmationStep } from "./onboarding-steps/confirmation-step"
+import { DocumentUploadStep, type DocumentInfo } from "./onboarding-steps/document-upload-step"
 import emailjs from "emailjs-com"
 
 export interface FormData {
@@ -47,14 +48,21 @@ export interface FormData {
   acceptTerms: boolean
   consentToStore: boolean
   consentToContact: boolean
+
+  // Document Info
+  documents: DocumentInfo[]
+
+  // Additional fields for confirmation
+  applicationNumber?: string
 }
 
 const steps = [
   { id: 1, title: "Basic Information", description: "Personal and contact details" },
   { id: 2, title: "Vehicle Information", description: "Truck details and registration" },
   { id: 3, title: "Banking Details", description: "Payment and account information" },
-  { id: 4, title: "Terms & Consent", description: "Agreement and permissions" },
-  { id: 5, title: "Confirmation", description: "Review and submit" },
+  { id: 4, title: "Document Upload", description: "Supporting documents" },
+  { id: 5, title: "Terms & Consent", description: "Agreement and permissions" },
+  { id: 6, title: "Confirmation", description: "Review and submit" },
 ]
 
 export function HaulerOnboardingForm() {
@@ -88,6 +96,7 @@ export function HaulerOnboardingForm() {
     acceptTerms: false,
     consentToStore: false,
     consentToContact: false,
+    documents: [],
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -199,6 +208,12 @@ export function HaulerOnboardingForm() {
         break
 
       case 4:
+        if (!formData.documents || formData.documents.length === 0) {
+          newErrors.documents = "At least one document must be uploaded"
+        }
+        break
+
+      case 5:
         if (!formData.acceptTerms) newErrors.acceptTerms = "You must accept the terms of use to continue"
         if (!formData.consentToStore) newErrors.consentToStore = "You must consent to data storage to continue"
         if (!formData.consentToContact) newErrors.consentToContact = "You must consent to be contacted to continue"
@@ -230,11 +245,66 @@ export function HaulerOnboardingForm() {
     setSubmitError("")
 
     try {
+      const applicationData = {
+        full_name: formData.fullName,
+        id_number: formData.idNumber,
+        entity_type: formData.entityType as "individual" | "business",
+        business_name: formData.entityType === "business" ? formData.businessName : undefined,
+        beee_level: formData.entityType === "business" ? formData.beeLevel : undefined,
+        cipc_registration: formData.entityType === "business" ? formData.cipcRegistration : undefined,
+        mobile_number: formData.mobileNumber,
+        email: formData.email,
+        physical_address: formData.physicalAddress,
+        province: formData.province,
+        bank_name: formData.bankName,
+        account_holder_name: formData.accountHolderName,
+        account_number: formData.accountNumber,
+        account_type: formData.accountType,
+        branch_code: formData.branchCode,
+        accept_terms: formData.acceptTerms,
+        consent_to_store: formData.consentToStore,
+        consent_to_contact: formData.consentToContact,
+      }
+
+      const trucksData = formData.trucks.map((truck, index) => ({
+        truck_number: index + 1,
+        vehicle_type: truck.vehicleType,
+        load_capacity: truck.loadCapacity,
+        horse_registration: truck.horseRegistration,
+        trailer1_registration: truck.trailer1Registration || undefined,
+        trailer2_registration: truck.trailer2Registration || undefined,
+      }))
+
+      const documentsData = formData.documents.map((doc) => ({
+        document_type: doc.type,
+        file_name: doc.name,
+        file_size: doc.size,
+      }))
+
+      const response = await fetch("/api/hauler-applications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          applicationData,
+          trucks: trucksData,
+          documents: documentsData,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to save application")
+      }
+
+      const { applicationId, applicationNumber } = await response.json()
+
       const serviceId = "service_tch5rgi"
       const templateId = "template_ip0owji"
       const publicKey = "ByieGc7Pzw6Jt7f7I"
 
       const templateParams = {
+        application_number: applicationNumber,
         applicant_name: formData.fullName,
         id_number: formData.idNumber,
         entity_type: formData.entityType === "business" ? "Business" : "Individual",
@@ -263,13 +333,18 @@ export function HaulerOnboardingForm() {
         data_consent: formData.consentToStore ? "Yes" : "No",
         contact_consent: formData.consentToContact ? "Yes" : "No",
         submission_date: new Date().toLocaleString(),
+        document_count: formData.documents.length.toString(),
+        document_info: formData.documents
+          .map((doc) => `${getDocumentTypeLabel(doc.type)}: ${doc.name} (${formatFileSize(doc.size)})`)
+          .join("\n"),
       }
 
       await emailjs.send(serviceId, templateId, templateParams, publicKey)
 
-      setCurrentStep(5)
+      updateFormData({ applicationNumber } as any)
+      setCurrentStep(6)
     } catch (error) {
-      console.error("Email submission error:", error)
+      console.error("Submission error:", error)
       setSubmitError("Failed to submit application. Please try again or contact support.")
     } finally {
       setIsSubmitting(false)
@@ -285,8 +360,10 @@ export function HaulerOnboardingForm() {
       case 3:
         return <BankingInfoStep formData={formData} updateFormData={updateFormData} errors={errors} />
       case 4:
-        return <TermsConsentStep formData={formData} updateFormData={updateFormData} errors={errors} />
+        return <DocumentUploadStep formData={formData} updateFormData={updateFormData} errors={errors} />
       case 5:
+        return <TermsConsentStep formData={formData} updateFormData={updateFormData} errors={errors} />
+      case 6:
         return <ConfirmationStep formData={formData} />
       default:
         return null
@@ -376,7 +453,7 @@ export function HaulerOnboardingForm() {
           {renderStep()}
 
           {/* Navigation Buttons */}
-          {currentStep < 5 && (
+          {currentStep < 6 && (
             <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 pt-6 sm:pt-8 border-t">
               <Button
                 variant="outline"
@@ -389,7 +466,7 @@ export function HaulerOnboardingForm() {
               </Button>
 
               <Button
-                onClick={currentStep === 4 ? handleSubmit : handleNext}
+                onClick={currentStep === 5 ? handleSubmit : handleNext}
                 disabled={isSubmitting}
                 className="flex items-center justify-center gap-2 h-11 sm:h-10 order-1 sm:order-2"
               >
@@ -398,7 +475,7 @@ export function HaulerOnboardingForm() {
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
                     Submitting...
                   </>
-                ) : currentStep === 4 ? (
+                ) : currentStep === 5 ? (
                   "Submit Application"
                 ) : (
                   <>
@@ -413,4 +490,28 @@ export function HaulerOnboardingForm() {
       </Card>
     </div>
   )
+}
+
+const getDocumentTypeLabel = (type: string) => {
+  const documentTypes = [
+    { value: "vehicle_registration", label: "Vehicle Registration Certificate" },
+    { value: "drivers_license", label: "Driver's License" },
+    { value: "vehicle_insurance", label: "Vehicle Insurance Certificate" },
+    { value: "roadworthy_certificate", label: "Roadworthy Certificate" },
+    { value: "bank_statement", label: "Bank Statement" },
+    { value: "bank_confirmation", label: "Bank Account Confirmation Letter" },
+    { value: "id_document", label: "ID Document / Passport" },
+    { value: "business_registration", label: "Business Registration (CIPC)" },
+    { value: "tax_clearance", label: "Tax Clearance Certificate" },
+    { value: "other", label: "Other Supporting Document" },
+  ]
+  return documentTypes.find((dt) => dt.value === type)?.label || type
+}
+
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return "0 Bytes"
+  const k = 1024
+  const sizes = ["Bytes", "KB", "MB", "GB"]
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
 }

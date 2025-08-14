@@ -1,8 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { CheckCircle, Clock, Mail, Phone, FileText, Download } from "lucide-react"
+import { CheckCircle, Clock, Mail, Phone } from "lucide-react"
 import type { FormData } from "../hauler-onboarding-form"
 
 interface ConfirmationStepProps {
@@ -10,11 +9,7 @@ interface ConfirmationStepProps {
 }
 
 export function ConfirmationStep({ formData }: ConfirmationStepProps) {
-  const generateApplicationId = () => {
-    return `HAU-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`
-  }
-
-  const applicationId = generateApplicationId()
+  const applicationId = formData.applicationNumber || "Processing..."
 
   const handleDownloadSummary = () => {
     // In a real app, this would generate and download a PDF summary
@@ -44,7 +39,7 @@ export function ConfirmationStep({ formData }: ConfirmationStepProps) {
         </div>
 
         <div className="bg-muted/50 rounded-lg p-4 inline-block">
-          <div className="text-sm text-muted-foreground">Application ID</div>
+          <div className="text-sm text-muted-foreground">Application Number</div>
           <div className="text-xl font-mono font-semibold text-foreground">{applicationId}</div>
         </div>
       </div>
@@ -64,10 +59,10 @@ export function ConfirmationStep({ formData }: ConfirmationStepProps) {
                 <span className="text-sm font-semibold text-primary">1</span>
               </div>
               <div>
-                <h4 className="font-semibold text-foreground">Document Verification</h4>
+                <h4 className="font-semibold text-foreground">Document Collection & Verification</h4>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Our team will review your submitted documents including vehicle registration, insurance, and banking
-                  details.
+                  Our team will contact you to collect required documents including vehicle registration, insurance,
+                  roadworthy certificates, and banking proof.
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
                   <strong>Timeline:</strong> 2-3 business days
@@ -123,10 +118,32 @@ export function ConfirmationStep({ formData }: ConfirmationStepProps) {
       </Card>
 
       {/* Contact Information */}
-      
-
-      {/* Application Summary Actions */}
-      
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Phone className="h-5 w-5 text-primary" />
+            Need Help?
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+              <Mail className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <div className="text-sm font-medium">Email Support</div>
+                <div className="text-sm text-muted-foreground">lopetransport23@gmail.com</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+              <Phone className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <div className="text-sm font-medium">Phone Support</div>
+                <div className="text-sm text-muted-foreground">Available 9 AM - 5 PM</div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Final Thank You */}
       <div className="text-center py-8">
@@ -134,6 +151,9 @@ export function ConfirmationStep({ formData }: ConfirmationStepProps) {
         <p className="text-muted-foreground max-w-2xl mx-auto">
           We're excited to potentially welcome you to our network of professional haulers. Our team will review your
           application carefully and get back to you soon.
+        </p>
+        <p className="text-sm text-muted-foreground mt-4">
+          Please save your application number <strong>{applicationId}</strong> for future reference.
         </p>
       </div>
     </div>
